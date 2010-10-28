@@ -116,7 +116,7 @@ class Sc2RanksResponse:
 
 	
 if __name__ == '__main__':
-	sc2 = Sc2Ranks('saua.no')
+	sc2 = Sc2Ranks('an_app_key')
 	#response = sc2.fetch_base_character('eu', 'canute', 501)
 	response = sc2.fetch_base_character_teams('eu', 'canute', 501)
 	print response.name, response.region, response.bnet_id, response.teams['1v1'].league, response.teams['2v2'].points
