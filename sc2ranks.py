@@ -9,7 +9,7 @@ class Sc2Ranks:
 
     def api_fetch(self, path, params=''):
         """
-        Fetch some json from the API
+        Fetch some JSON from the API
 
         >>> client = Sc2Ranks('github.com/phleet/sc2ranks')
         >>> client.api_fetch('search/exact/us/phleet')
@@ -19,10 +19,13 @@ class Sc2Ranks:
         return fetch_json(url,params)
 
     def validate(self, data, exception):
-        if data.has_key('error'):
+        if type(data).__name__ == 'dict' and data.has_key('error'):
             raise exception
         else:
-            return Sc2RanksResponse(data)
+            if type(data).__name__ == 'dict':
+                return Sc2RanksResponse(data)
+            elif type(data).__name__ == 'list':
+                return [Sc2RanksResponse(datum) for datum in data]
 
     def search_for_character(self, region, name, search_type='exact'):
         """
@@ -41,6 +44,37 @@ class Sc2Ranks:
             data        = self.api_fetch('search/%s/%s/%s' % (search_type,region,name)),
             exception   = NoSuchCharacterException("Name: %s, region: %s" % (name,region))
         )
+
+    def search_for_profile(self, region, name, search_type='1t', search_subtype='division', value='Division'):
+        """
+        Search for a character profile
+
+        >>> client = Sc2Ranks('github.com/phleet/sc2ranks')
+        >>> client.search_for_profile(name='phleet', region='us')
+        ... #doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
+        [<Sc2RanksResponse(bnet_id=299464, 
+            name=phleet, 
+            achievement_points=..., 
+            character_code=..., 
+            region=us, 
+            team={u'division_id': ..., 
+                  u'division_name': ...,
+                  u'wins': ...,
+                  u'losses': ...,
+                  u'points': ...,
+                  u'id': ...}, 
+            id=...)>]       
+        >>> client.search_for_profile(name='PleaseNobodyTakeThisUsername', region='us')
+        Traceback (most recent call last):
+            ...
+        NoSuchCharacterException: Name: PleaseNobodyTakeThisUsername, region: us
+        """
+
+        return self.validate(
+            data        = self.api_fetch('psearch/%s/%s/%s/%s/%s' % (region,name,search_type,search_subtype,value)),
+            exception   = NoSuchCharacterException("Name: %s, region: %s" % (name,region))
+        )
+
         
     def fetch_base_character(self, region, name, code):
         """
