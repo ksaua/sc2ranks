@@ -1,4 +1,6 @@
-import urllib, json
+import urllib
+import json
+import simplejson
 
 valid_regions = ('us', 'eu', 'kr', 'tw', 'sea', 'ru', 'la')
 max_chars = 98
@@ -15,8 +17,9 @@ class Sc2Ranks:
         >>> client.api_fetch('search/exact/eu/Kapitulation')
         {u'total': 1, u'characters': [{u'bnet_id': 316741, u'name': u'Kapitulation'}]}
         """
-        url = "http://sc2ranks.com/api/%s.json?appKey=%s" % (path,self.app_key)
-        return fetch_json(url,params)
+        url = "http://sc2ranks.com/api/%s.json?appKey=%s" % (path, self.app_key)
+        return fetch_json(url, params)
+
 
     def validate(self, data, exception):
         if type(data).__name__ == 'dict' and data.has_key('error'):
@@ -41,9 +44,8 @@ class Sc2Ranks:
         """
 
         return self.validate(
-            data        = self.api_fetch('search/%s/%s/%s' % (search_type,region,name)),
-            exception   = NoSuchCharacterException("Name: %s, region: %s" % (name,region))
-        )
+            data = self.api_fetch('search/%s/%s/%s' % (search_type, region,name)),
+            exception = NoSuchCharacterException("Name: %s, region: %s" % (name, region)))
 
     def search_for_profile(self, region, name, search_type='1t', search_subtype='division', value='Division'):
         """
@@ -83,8 +85,10 @@ class Sc2Ranks:
                           achievement_points=...,
                           region=eu,
                           updated_at=...,
-                          portrait=<Sc2RanksResponse(...)>,
-                          character_code=922, id=142086)>
+                          character_code=...,
+                          portrait=<Sc2RanksResponse(column=..., icon_id=..., row=...)>,
+                          id=...)>
+
         """
 
         return self.validate(
@@ -99,29 +103,10 @@ class Sc2Ranks:
         >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
         >>> client.fetch_base_character_teams(region='eu', name='Kapitulation', bnet_id='316741')
         ... #doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
-        <Sc2RanksResponse(bnet_id=316741, name=Kapitulation,
-            achievement_points=...,
-            region=eu,
-            updated_at=...,
-            teams={'2v2': <Sc2RanksResponse(division=...,
-                            region_rank=...,
-                            ratio=...,
-                            league=...,
-                            fav_race=...,
-                            wins=...,
-                            losses=...,
-                            points=...,
-                            updated_at=...,
-                            is_random=...,
-                            world_rank=...,
-                            division_rank=...,
-                            bracket=...)>,
-                '4v4': <Sc2RanksResponse(...)>,
-                '3v3': <Sc2RanksResponse(...)>,
-                '1v1': <Sc2RanksResponse(...)>},
-            portrait=<Sc2RanksResponse(column=..., icon_id=..., row=...)>,
-            character_code=922,
-            id=513263)>
+        <Sc2RanksResponse(bnet_id=316741, name=Kapitulation, achievement_points=..., region=eu, updated_at=...,
+        teams={...},
+        character_code=..., portrait=<Sc2RanksResponse(column=..., icon_id=..., row=...)>, id=...)>
+
         """
 
         return self.validate(
@@ -136,33 +121,24 @@ class Sc2Ranks:
         >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
         >>> client.fetch_character_teams(region='eu', name='Kapitulation', bnet_id='316741', bracket='3v3')
         ... #doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
-        <Sc2RanksResponse(bnet_id=316741, name=Kapitulation,
-            achievement_points=...,
-            region=eu,
-            updated_at=...,
-            teams={'3v3': <Sc2RanksResponse(division_id=...,
-                            division=...,
-                            region_rank=...,
-                            league=...,
-                            updated_at=...,
-                            world_rank=...,
-                            members=[<Sc2RanksResponse(id=...,
-                                        fav_race=...,
-                                        bnet_id=...,
-                                        name=...,
-                                        character_code=...)>,
-                                    <Sc2RanksResponse(...)>],
-                            division_rank=...,
-                            id=...,
-                            points=...,
-                            fav_race=...,
-                            ratio=...,
-                            wins=...,
-                            losses=...,
-                            is_random=...,
-                            bracket=...)>},
-            character_code=922,
-            id=142086)>
+        <Sc2RanksResponse(bnet_id=316741,
+                          name=Kapitulation,
+                          achievement_points=...,
+                          region=eu,
+                          updated_at=...,
+                          teams={'3v3':
+                                        <Sc2RanksResponse(division_id=..., division=..., region_rank=..., fav_race=..., updated_at=..., world_rank=...,
+                                        members=[<Sc2RanksResponse(fav_race=..., bnet_id=..., id=..., character_code=..., name=...)>,
+                                        <Sc2RanksResponse(fav_race=..., bnet_id=..., id=..., character_code=..., name=...)>],
+                                        division_rank=...,
+                                        id=..., bracket=...,
+                                        league=bronze, ratio=...,
+                                        wins=...,
+                                        losses=...,
+                                        is_random=...,
+                                        points=...)>},
+                          character_code=...,
+                          id=142086)>
         """
         bracket = int(bracket[0])
         is_random = 1 if is_random else 0
