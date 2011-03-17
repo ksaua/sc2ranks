@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import urllib
 import json
-import simplejson
 
-valid_regions = ('us', 'eu', 'kr', 'tw', 'sea', 'ru', 'la')
-max_chars = 98
+MAX_CHARS = 98
+API_KEY = 'github.com/anrie/sc2ranks'
+
 
 class Sc2Ranks:
     def __init__(self, app_key):
@@ -13,16 +14,15 @@ class Sc2Ranks:
         """
         Fetch some JSON from the API
 
-        >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
+        >>> client = Sc2Ranks(API_KEY)
         >>> client.api_fetch('search/exact/eu/Kapitulation')
         {u'total': 1, u'characters': [{u'bnet_id': 316741, u'name': u'Kapitulation'}]}
         """
         url = "http://sc2ranks.com/api/%s.json?appKey=%s" % (path, self.app_key)
         return fetch_json(url, params)
 
-
     def validate(self, data, exception):
-        if type(data).__name__ == 'dict' and data.has_key('error'):
+        if type(data).__name__ == 'dict' and 'error' in data:
             raise exception
         else:
             if type(data).__name__ == 'dict':
@@ -34,24 +34,24 @@ class Sc2Ranks:
         """
         Search for a character by screen name
 
-        >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
-        >>> client.search_for_character(region='eu',name='Kapitulation')
+        >>> client = Sc2Ranks(API_KEY)
+        >>> client.search_for_character(region='eu', name='Kapitulation')
         <Sc2RanksResponse(total=1, characters=[{u'bnet_id': 316741, u'name': u'Kapitulation'}])>
-        >>> client.search_for_character(region='eu',name='PleaseNobodyTakeThisUsername')
+        >>> client.search_for_character(region='eu', name='PleaseNobodyTakeThisUsername')
         Traceback (most recent call last):
             ...
         NoSuchCharacterException: Name: PleaseNobodyTakeThisUsername, region: eu
         """
 
         return self.validate(
-            data = self.api_fetch('search/%s/%s/%s' % (search_type, region,name)),
-            exception = NoSuchCharacterException("Name: %s, region: %s" % (name, region)))
+            data=self.api_fetch('search/%s/%s/%s' % (search_type, region, name)),
+            exception=NoSuchCharacterException("Name: %s, region: %s" % (name, region)))
 
     def search_for_profile(self, region, name, search_type='1t', search_subtype='division', value='Division'):
         """
         Search for a character profile
 
-        >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
+        >>> client = Sc2Ranks(API_KEY)
         >>> client.search_for_profile(name='Kapitulation', region='eu')
         ... #doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
         [<Sc2RanksResponse(bnet_id=316741, name=Kapitulation, achievement_points=..., character_code=..., region=eu,
@@ -68,16 +68,14 @@ class Sc2Ranks:
         """
 
         return self.validate(
-            data        = self.api_fetch('psearch/%s/%s/%s/%s/%s' % (region, name, search_type, search_subtype, value)),
-            exception   = NoSuchCharacterException("Name: %s, region: %s" % (name,region))
-        )
-
+            data=self.api_fetch('psearch/%s/%s/%s/%s/%s' % (region, name, search_type, search_subtype, value)),
+            exception=NoSuchCharacterException("Name: %s, region: %s" % (name, region)))
 
     def fetch_base_character(self, region, name, bnet_id):
         """
         Minimum amount of character data, just gives achievement points, character code and battle.net id info.
 
-        >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
+        >>> client = Sc2Ranks(API_KEY)
         >>> client.fetch_base_character(region='eu', name='Kapitulation', bnet_id='316741')
         ... #doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
         <Sc2RanksResponse(bnet_id=316741,
@@ -92,15 +90,14 @@ class Sc2Ranks:
         """
 
         return self.validate(
-            data        = self.api_fetch("base/char/%s/%s!%s" % (region, name, bnet_id)),
-            exception   = NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id))
-        )
+            data=self.api_fetch("base/char/%s/%s!%s" % (region, name, bnet_id)),
+            exception=NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id)))
 
     def fetch_base_character_teams(self, region, name, bnet_id):
         """
         Base character data plus team items
 
-        >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
+        >>> client = Sc2Ranks(API_KEY)
         >>> client.fetch_base_character_teams(region='eu', name='Kapitulation', bnet_id='316741')
         ... #doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
         <Sc2RanksResponse(bnet_id=316741, name=Kapitulation, achievement_points=..., region=eu, updated_at=...,
@@ -110,15 +107,14 @@ class Sc2Ranks:
         """
 
         return self.validate(
-            data        = self.api_fetch("base/teams/%s/%s!%s" % (region, name, bnet_id)),
-            exception   = NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id))
-        )
+            data=self.api_fetch("base/teams/%s/%s!%s" % (region, name, bnet_id)),
+            exception=NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id)))
 
     def fetch_character_teams(self, region, name, bnet_id, bracket, is_random=False):
         """
         Gets character info and extended team info
 
-        >>> client = Sc2Ranks('github.com/anrie/sc2ranks')
+        >>> client = Sc2Ranks(API_KEY)
         >>> client.fetch_character_teams(region='eu', name='Kapitulation', bnet_id='316741', bracket='3v3')
         ... #doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
         <Sc2RanksResponse(bnet_id=316741,
@@ -126,26 +122,15 @@ class Sc2Ranks:
                           achievement_points=...,
                           region=eu,
                           updated_at=...,
-                          teams={'3v3':
-                                        <Sc2RanksResponse(division_id=..., division=..., region_rank=..., fav_race=..., updated_at=..., world_rank=...,
-                                        members=[<Sc2RanksResponse(fav_race=..., bnet_id=..., id=..., character_code=..., name=...)>,
-                                        <Sc2RanksResponse(fav_race=..., bnet_id=..., id=..., character_code=..., name=...)>],
-                                        division_rank=...,
-                                        id=..., bracket=...,
-                                        league=bronze, ratio=...,
-                                        wins=...,
-                                        losses=...,
-                                        is_random=...,
-                                        points=...)>},
+                          teams={'3v3':...},
                           character_code=...,
-                          id=142086)>
+                          id=...)>
         """
         bracket = int(bracket[0])
         is_random = 1 if is_random else 0
         return self.validate(
-            data        = self.api_fetch("char/teams/%s/%s!%s/%s/%s" % (region, name, bnet_id, bracket, is_random)),
-            exception   = NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id))
-        )
+            data=self.api_fetch("char/teams/%s/%s!%s/%s/%s" % (region, name, bnet_id, bracket, is_random)),
+            exception=NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id)))
 
     def fetch_mass_base_characters(self, characters):
         """
@@ -159,10 +144,10 @@ class Sc2Ranks:
             url = 'http://sc2ranks.com/api/mass/base/char/?appKey=%s' % self.app_key
             return fetch_json(url, params)
 
-        for i in range(0, (len(characters) / max_chars) + 1):
-            result = get_batch(characters[i * max_chars:(i+1)*max_chars])
-            for r in result: yield Sc2RanksResponse(r)
-
+        for i in range(0, (len(characters) / MAX_CHARS) + 1):
+            result = get_batch(characters[i * MAX_CHARS:(i + 1) * MAX_CHARS])
+            for r in result:
+                yield Sc2RanksResponse(r)
 
     def fetch_mass_characters_team(self, characters, bracket, is_random=False):
         """Characters format: ((region1, name1, bnet_id1), (region2, name2, bnet_id2)..)
@@ -181,9 +166,11 @@ class Sc2Ranks:
             url = 'http://sc2ranks.com/api/mass/base/teams/?appKey=%s' % self.app_key
             return fetch_json(url, params)
 
-        for i in range(0, (len(characters) / max_chars) + 1):
-            result = get_batch(characters[i * max_chars:(i+1)*max_chars])
-            for r in result: yield Sc2RanksResponse(r)
+        for i in range(0, (len(characters) / MAX_CHARS) + 1):
+            result = get_batch(characters[i * MAX_CHARS:(i + 1) * MAX_CHARS])
+            for r in result:
+                yield Sc2RanksResponse(r)
+
 
 def character_url(region, name, bnet_id=None, code=None):
     """Returns the url to a character on sc2ranks.com"""
@@ -204,22 +191,25 @@ def fetch_json(url, params=None):
     f.close()
     return data
 
+
 class ParameterException(Exception):
     pass
+
 
 class NoSuchCharacterException(Exception):
     pass
 
+
 class Sc2RanksResponse:
     def __init__(self, d):
-        if d.has_key('portrait'):
+        if 'portrait' in d:
             d['portrait'] = Sc2RanksResponse(d['portrait'])
 
-        if d.has_key('teams'):
+        if 'teams' in d:
             teams = dict(map(lambda t: ("%sv%s" % (t['bracket'], t['bracket']), Sc2RanksResponse(t)), d['teams']))
             d['teams'] = teams
 
-        if d.has_key('members'):
+        if 'members' in d:
             d['members'] = map(lambda m: Sc2RanksResponse(m), d['members'])
 
         self.__dict__.update(d)
@@ -231,4 +221,3 @@ class Sc2RanksResponse:
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-
