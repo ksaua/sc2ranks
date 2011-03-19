@@ -79,7 +79,22 @@ class Sc2Ranks:
             for r in result:
                 yield Sc2RanksResponse(r)
 
-    def fetch_mass_characters_team(self, characters, bracket, is_random=False):
+    def fetch_custom_division_characters(self, division_id, region='all', league='all', bracket=1, is_random=False):
+        """
+        Fetches characters and teams from custom divisions.
+
+        URL format: http://sc2ranks.com/api/clist/[div id]/[region or all]/[league or all]/[bracket]/[1 or 0 for random brackets]
+        Example: http://sc2ranks.com/api/clist/1/all/all/1/0
+        """
+
+        is_random = int(is_random)
+
+        result = self.validate(
+            data=self.api_fetch("clist/%d/%s/%s/%d/%d" % (division_id, region, league, bracket, is_random)),
+            exception=NoSuchDivision())
+        return result
+
+    def fetch_mass_characters_team(self, characters, bracket='1v1', is_random=False):
         """Fetches the data for multiple characters at once inlcuding extended team data.
 
         Characters format: ((region1, name1, bnet_id1), (region2, name2, bnet_id2)..)
@@ -129,6 +144,10 @@ class ParameterException(Exception):
 
 
 class NoSuchCharacterException(Exception):
+    pass
+
+
+class NoSuchDivision(Exception):
     pass
 
 

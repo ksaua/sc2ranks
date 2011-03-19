@@ -5,6 +5,9 @@ API_KEY = 'tests@github.com/anrie/sc2ranks'
 PLAYER_NAME = 'Kapitulation'
 BNET_ID = 316741
 REGION = 'eu'
+DIVISION_BRACKET = 3
+DIVISION_ID = 5404
+
 
 class BaseTest(unittest.TestCase):
 
@@ -69,6 +72,15 @@ class BaseTest(unittest.TestCase):
         #the two other team-members should be listed
         self.assertEqual(len(teams['3v3'].members), 2)
 
+    def testFetchCustomDivisionCharacters(self):
+        """Fetching characters from a custom division."""
+        response = self.client.fetch_custom_division_characters(DIVISION_ID, bracket=DIVISION_BRACKET)
+        attrs = ['league', 'points', 'division_rank', 'members']
+        for team in response:
+            for attr in attrs:
+                self.assertTrue(hasattr(team, attr))
+            self.assertEqual(DIVISION_BRACKET, len(team.members))
+
     def testSearchNotExistingCharacter(self):
         """Raise an exception if searched character doesn't exist."""
         self.assertRaises(NoSuchCharacterException, self.client.search_for_character, region='eu', name='ThisCharacterDoesNotExistDoesIt')
@@ -80,4 +92,3 @@ class BaseTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
