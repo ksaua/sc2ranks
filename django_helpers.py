@@ -9,15 +9,16 @@ try:
 except (ImportError, AttributeError):
     print "Please configure 'SC2RANKS_API_KEY' in your settings.py"
 
-REGION = 'eu'
-
 
 class Sc2RanksMixin(object):
+    """Add methods for fetching SC2Ranks-Data to a Django model"""
+
     client = Sc2Ranks(SC2RANKS_API_KEY)
     # How to best enforce that a model that uses this mixin has these fields set?
     # TODO: evaluate abstract properties
     player_fieldname = None
     bnet_id_fieldname = None
+    bnet_realm_fieldname = None
 
     @property
     def bnet_name(self):
@@ -39,10 +40,21 @@ class Sc2RanksMixin(object):
         except AssertionError:
             raise AssertionError('No field mapping for bnet_id_fieldname specified')
         except AttributeError:
-            raise AttributeError('The fieldname specified for bnet_id does not exist on this model')
+            raise AttributeError('The fieldname specified for bnet_id_fieldname does not exist on this model')
+
+    @property
+    def bnet_realm(self):
+        try:
+            assert bool(self.bnet_realm_fieldname)
+            bnet_realm_field = getattr(self, 'bnet_realm_fieldname')
+            return  getattr(self, bnet_realm_field)
+            raise AssertionError('No field mapping for bnet_realm_fieldname specified')
+        except AttributeError:
+            raise AttributeError('The fieldname specified for bnet_realm does not exist on this model')
 
     def assert_bnet_id(self):
         """Updates the players battle.net id if it isn't set yet."""
+
         if not self.bnet_id:
             try:
                 bnet_id = self.get_sc2ranks_bnet_id()
@@ -55,22 +67,22 @@ class Sc2RanksMixin(object):
     ########################
     # Sc2Ranks-Api methods #
     ########################
-
-    def search_character(self, region=REGION):
+    def search_character(self):
         """Search a character by name."""
-        data = self.client.search_for_character(region,
-                                                self.bnet_name)
+
+        data = self.client.search_for_character(self.bnet_realm, self.bnet_name)
         return data
 
     @property
     def bnet_url(self):
         if self.bnet_id and self.bnet_name:
-            return 'http://eu.battle.net/sc2/en/profile/%s/1/%s/' % (self.bnet_id,
+            return 'http://%s.battle.net/sc2/en/profile/%s/1/%s/' % (self.bnet_realm,
+                                                                     self.bnet_id,
                                                                      self.bnet_name)
 
     @property
     def sc2ranks_profile_page(self):
-        return "http://www.sc2ranks.com/%s/%s/%s/" % (REGION,
+        return "http://www.sc2ranks.com/%s/%s/%s/" % (self.bnet_realm,
                                                       self.bnet_id,
                                                       self.bnet_name)
 
@@ -86,7 +98,7 @@ class Sc2RanksMixin(object):
 
         character_data = self.client.fetch_base_character(name=self.bnet_name,
                                                           bnet_id=self.bnet_id,
-                                                          region=REGION)
+                                                          region=self.bnet_realm)
         if character_data:
             character = character_data
             cache.set(cache_key, character, cache_seconds)
@@ -108,11 +120,10 @@ class Sc2RanksMixin(object):
         if cached_teams is not None:
             teams = cached_teams
         else:
-            teams = self.client.fetch_character_teams(region=REGION,
+            teams = self.client.fetch_character_teams(region=self.bnet_realm,
                                                        name=self.bnet_name,
                                                        bracket=bracket,
                                                        bnet_id=self.bnet_id)
-
             cache.set(cache_key, teams, 1800)
 
         teams_partner = []
@@ -124,12 +135,14 @@ class Sc2RanksMixin(object):
             teams = list(set(teams_partner))
         return teams
 
-    def get_sc2ranks_bnet_id(self, region='eu'):
+    def get_sc2ranks_bnet_id(self):
         """Get the battle.net id for a player name."""
-        return self.search_character(region).characters[0]['bnet_id']
+
+        return self.search_character().characters[0]['bnet_id']
 
     def get_sc2ranks_portrait(self, size=75):
         """Returns the data needed to render the starcraft profile image."""
+
         if self.get_sc2ranks_base_character:
             try:
                 portrait = self.get_sc2ranks_base_character.portrait

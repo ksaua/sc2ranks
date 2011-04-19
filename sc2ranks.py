@@ -3,8 +3,6 @@ import urllib
 import json
 
 MAX_CHARS = 98
-API_KEY = 'github.com/anrie/sc2ranks'
-
 
 class Sc2Ranks:
     def __init__(self, app_key):
@@ -12,6 +10,7 @@ class Sc2Ranks:
 
     def api_fetch(self, path, params=''):
         """Fetch some JSON from the API."""
+
         url = "http://sc2ranks.com/api/%s.json?appKey=%s" % (path, self.app_key)
         return fetch_json(url, params)
 
@@ -37,7 +36,8 @@ class Sc2Ranks:
             exception=NoSuchCharacterException("Name: %s, region: %s" % (name, region)))
 
     def fetch_base_character(self, region, name, bnet_id):
-        """Fetches the minimum amount of character data.
+        """
+        Fetches the minimum amount of character data.
 
         Just gives achievement points, character code, portrait and battle.net id info.
         """
@@ -55,14 +55,18 @@ class Sc2Ranks:
 
     def fetch_character_teams(self, region, name, bnet_id, bracket, is_random=False):
         """Fetches character info and extended team info."""
-        bracket = int(bracket[0])
+        try:
+            bracket = int(bracket[0])
+        except:
+            pass
         is_random = 1 if is_random else 0
         return self.validate(
             data=self.api_fetch("char/teams/%s/%s!%s/%s/%s" % (region, name, bnet_id, bracket, is_random)),
             exception=NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id)))
 
     def fetch_mass_base_characters(self, characters):
-        """Fetches the data for multiple characters at once.
+        """
+        Fetches the data for multiple characters at once.
 
         Characters format: ((region1, name1, bnet_id1), (region2, name2, bnet_id2)..)"""
 
@@ -99,7 +103,8 @@ class Sc2Ranks:
 
         Characters format: ((region1, name1, bnet_id1), (region2, name2, bnet_id2)..)
         bracket is like: '1v1'
-        is_random is True/False"""
+        is_random is True/False
+        """
 
         bracket = int(bracket[0])
         is_random = 1 if is_random else 0
