@@ -128,7 +128,7 @@ class Sc2RanksMixin(object):
 
         teams_partner = []
         if partner:
-            for team in teams:
+            for team in teams.teams:
                 for member in team.members:
                     if member.name in partner:
                         teams_partner.append(team)

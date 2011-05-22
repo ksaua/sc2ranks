@@ -164,11 +164,10 @@ class Sc2RanksResponse(object):
             d['portrait'] = Sc2RanksResponse(d['portrait'])
 
         if 'teams' in d:
-            teams = dict(map(lambda t: ("%sv%s" % (t['bracket'], t['bracket']), Sc2RanksResponse(t)), d['teams']))
-            d['teams'] = teams
+            d['teams'] = [Sc2RanksResponse(team) for team in d['teams'] if team]
 
         if 'members' in d:
-            d['members'] = map(lambda m: Sc2RanksResponse(m), d['members'])
+            d['members'] = [Sc2RanksResponse(member) for member in d['members'] if member]
 
         self.__dict__.update(d)
 

@@ -68,9 +68,9 @@ class BaseTest(unittest.TestCase):
         for attr in attrs:
             self.assertTrue(hasattr(response, attr))
         teams = response.teams
-        self.assertTrue('3v3' in teams)
+        self.assertTrue(teams[0].bracket == 3)
         #the two other team-members should be listed
-        self.assertEqual(len(teams['3v3'].members), 2)
+        self.assertEqual(len(teams[0].members), 2)
 
     def testFetchCustomDivisionCharacters(self):
         """Fetching characters from a custom division."""
