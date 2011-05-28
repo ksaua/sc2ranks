@@ -1,7 +1,7 @@
 from sc2ranks import Sc2Ranks
 from django.core.cache import cache
-import logging
 
+CACHE_TIME = 60 * 60 * 4
 
 try:
     from django.conf import settings
@@ -10,68 +10,74 @@ except (ImportError, AttributeError):
     print "Please configure 'SC2RANKS_API_KEY' in your settings.py"
 
 
-class Sc2RanksMixin(object):
-    """Add methods for fetching SC2Ranks-Data to a Django model"""
+class Sc2RanksManager(object):
+    """
+    Descriptor for handling access to Sc2Ranks-API.
+    """
 
-    client = Sc2Ranks(SC2RANKS_API_KEY)
-    # How to best enforce that a model that uses this mixin has these fields set?
-    # TODO: evaluate abstract properties
-    player_fieldname = None
-    bnet_id_fieldname = None
-    bnet_realm_fieldname = None
+    def __init__(self, name, realm, bid):
+        self.bnet = {}
+        self.bnet['name'] = name
+        self.bnet['realm'] = realm
+        self.bnet['bid'] = bid
 
-    @property
-    def bnet_name(self):
-        try:
-            assert bool(self.player_fieldname)
-            player_field = getattr(self, 'player_fieldname')
-            return  getattr(self, player_field)
-        except AssertionError:
-            raise AssertionError('No field mapping for player_fieldname specified')
-        except AttributeError:
-            raise AttributeError('The fieldname specified for player_fieldname does not exist on this model')
+    def __get__(self, instance, owner):
+        # get instance values and pass data to api wrapper
+        return Sc2RanksAPIWrapper(instance, **self.bnet)
 
-    @property
-    def bnet_id(self):
-        try:
-            assert bool(self.bnet_id_fieldname)
-            bnet_id_field = getattr(self, 'bnet_id_fieldname')
-            return  getattr(self, bnet_id_field)
-        except AssertionError:
-            raise AssertionError('No field mapping for bnet_id_fieldname specified')
-        except AttributeError:
-            raise AttributeError('The fieldname specified for bnet_id_fieldname does not exist on this model')
+
+class Sc2RanksAPIWrapper(object):
+
+    def __init__(self, instance, name, realm, bid):
+        self.bnet_name = instance.__dict__[name]
+        self.bnet_realm = instance.__dict__[realm]
+        self.bnet_id = instance.__dict__[bid]
+        self.client = Sc2Ranks(SC2RANKS_API_KEY)
 
     @property
-    def bnet_realm(self):
-        try:
-            assert bool(self.bnet_realm_fieldname)
-            bnet_realm_field = getattr(self, 'bnet_realm_fieldname')
-            return  getattr(self, bnet_realm_field)
-            raise AssertionError('No field mapping for bnet_realm_fieldname specified')
-        except AttributeError:
-            raise AttributeError('The fieldname specified for bnet_realm does not exist on this model')
+    def profile_page(self):
+        return "http://www.sc2ranks.com/%s/%s/%s/" % (self.bnet_realm,
+                                                      self.bnet_id,
+                                                      self.bnet_name)
 
-    def assert_bnet_id(self):
-        """Updates the players battle.net id if it isn't set yet."""
+    def get_team_stats(self, bracket=1, *partner):
+        """
+        Fetch team stats from sc2ranks.
 
-        if not self.bnet_id:
-            try:
-                bnet_id = self.get_sc2ranks_bnet_id()
-                setattr(self, self.bnet_id_fieldname, bnet_id)
-                self.save()
-            except Exception, e:
-                logging.debug('bnet_id could not be updated.\n %s' % e)
+        if no further parameter is given single player stats are returned
+        further options:
+            bracket = 1,2 etc.
+            partner = HandJudas, MrChance etc ...
+        """
+        data = None
+        cache_key = '%s%s' % (self.bnet_name, bracket)
+        cached_teams = cache.get(cache_key)
 
+        if cached_teams is not None:
+            data = cached_teams
+        else:
+            data = self.client.fetch_character_teams(region=self.bnet_realm,
+                                                       name=self.bnet_name,
+                                                       bracket=bracket,
+                                                       bnet_id=self.bnet_id)
+            cache.set(cache_key, data, CACHE_TIME)
 
-    ########################
-    # Sc2Ranks-Api methods #
-    ########################
+        teams = []
+        for team in data.teams:
+            # get the actual team from the list of all player's team in bracket
+            if hasattr(team, 'members'):
+                if all([member.name in partner for member in team.members]):
+                    teams.append(team)
+            else:
+                # as there are no members we can assume it's a single player team
+                teams = data.teams
+
+        return list(set(teams))
+
     def search_character(self):
         """Search a character by name."""
 
-        data = self.client.search_for_character(self.bnet_realm, self.bnet_name)
-        return data
+        return self.client.search_for_character(self.bnet_realm, self.bnet_name)
 
     @property
     def bnet_url(self):
@@ -80,18 +86,12 @@ class Sc2RanksMixin(object):
                                                                      self.bnet_id,
                                                                      self.bnet_name)
 
-    @property
-    def sc2ranks_profile_page(self):
-        return "http://www.sc2ranks.com/%s/%s/%s/" % (self.bnet_realm,
-                                                      self.bnet_id,
-                                                      self.bnet_name)
 
     @property
-    def get_sc2ranks_base_character(self, cache_seconds=1800):
+    def base_character(self, cache_seconds=CACHE_TIME):
         character = None
         cache_key = self.bnet_name
         character = cache.get(cache_key)
-        self.assert_bnet_id()
 
         if character is not None:
             return character
@@ -104,48 +104,13 @@ class Sc2RanksMixin(object):
             cache.set(cache_key, character, cache_seconds)
         return character
 
-    def get_sc2ranks_stats(self, bracket=1, *partner):
-        """
-        Get team stats from sc2ranks.com
 
-        if no further parameter is given single player stats are returned
-        further options:
-            bracket = 1,2 etc.
-            partner = HandJudas, MrChance etc ...
-        """
-        teams = None
-        cache_key = '%s%s' % (self.bnet_name, bracket)
-        cached_teams = cache.get(cache_key)
-
-        if cached_teams is not None:
-            teams = cached_teams
-        else:
-            teams = self.client.fetch_character_teams(region=self.bnet_realm,
-                                                       name=self.bnet_name,
-                                                       bracket=bracket,
-                                                       bnet_id=self.bnet_id)
-            cache.set(cache_key, teams, 1800)
-
-        teams_partner = []
-        if partner:
-            for team in teams.teams:
-                for member in team.members:
-                    if member.name in partner:
-                        teams_partner.append(team)
-            teams = list(set(teams_partner))
-        return teams
-
-    def get_sc2ranks_bnet_id(self):
-        """Get the battle.net id for a player name."""
-
-        return self.search_character().characters[0]['bnet_id']
-
-    def get_sc2ranks_portrait(self, size=75):
+    def get_portrait(self, size=75):
         """Returns the data needed to render the starcraft profile image."""
 
-        if self.get_sc2ranks_base_character:
+        if self.base_character:
             try:
-                portrait = self.get_sc2ranks_base_character.portrait
+                portrait = self.base_character.portrait
                 x = -(portrait.column * size)
                 y = -(portrait.row * size)
                 image = 'portraits-%d-%d.jpg' % (portrait.icon_id, size)

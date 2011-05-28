@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import urllib
 import json
+import logging
 
 MAX_CHARS = 98
 
@@ -10,7 +11,6 @@ class Sc2Ranks:
 
     def api_fetch(self, path, params=''):
         """Fetch some JSON from the API."""
-
         url = "http://sc2ranks.com/api/%s.json?appKey=%s" % (path, self.app_key)
         return fetch_json(url, params)
 
