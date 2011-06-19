@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
+import sys
 import urllib
-import json
 import logging
+
+# we assume simplejson is installed for pre Python2.6 platforms (as defined in
+# setup.py)
+if sys.hexversion < 0x02060000:
+    import simplejson as json
+else:
+    import json
 
 MAX_CHARS = 98
 
