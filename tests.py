@@ -1,4 +1,6 @@
 import unittest
+import logging
+
 from sc2ranks import *
 
 API_KEY = 'tests@github.com/anrie/sc2ranks'
@@ -22,8 +24,13 @@ class BaseTest(unittest.TestCase):
 
     def testSearchCharacter(self):
         """Search a character by name."""
-        response = str(self.client.search_for_character(region=REGION, name=PLAYER_NAME))
-        expected = "<Sc2RanksResponse(total=1, characters=[{u'bnet_id': %s, u'name': u'%s'}])>" % (BNET_ID, PLAYER_NAME)
+        response = self.client.search_for_character(region=REGION, name=PLAYER_NAME)
+        expected = Sc2RanksResponse()
+        expected.total = 1
+        expected.characters = [{
+                "bnet_id": BNET_ID,
+                "name": PLAYER_NAME
+            }]
         self.assertEqual(response, expected)
 
     def testSearchProfile(self):
@@ -82,12 +89,16 @@ class BaseTest(unittest.TestCase):
             self.assertEqual(DIVISION_BRACKET, len(team.members))
 
     def testSearchNotExistingCharacter(self):
-        """Raise an exception if searched character doesn't exist."""
-        self.assertRaises(NoSuchCharacterException, self.client.search_for_character, region='eu', name='ThisCharacterDoesNotExistDoesIt')
+        """Return None for a non-existing character"""
+        expected = None
+        result = self.client.search_for_character(region='eu', name='ThisCharacterDoesNotExistDoesIt')
+        self.assertEqual(expected, result)
 
     def testSearchNotExistingProfile(self):
         """Raise an exception if searched profile doesn't exist."""
-        self.assertRaises(NoSuchCharacterException, self.client.search_for_profile, region='eu', name='ThisCharacterDoesNotExistDoesIt')
+        expected = None
+        result = self.client.search_for_profile(region='eu', name='ThisCharacterDoesNotExistDoesIt')
+        self.assertEqual(expected, result)
 
 
 if __name__ == '__main__':

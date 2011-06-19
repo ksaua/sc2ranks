@@ -1,3 +1,6 @@
 *.pyc
+build
+distribute-*.egg
+distribute-*.tar.gz
 dist
 sc2ranks.egg-info
