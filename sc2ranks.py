@@ -11,19 +11,23 @@ else:
     import json
 
 MAX_CHARS = 98
+LOG = logging.getLogger(__name__)
 
 class Sc2Ranks:
     def __init__(self, app_key):
+        LOG.debug("Initialised SC2Ranks with API key '%s'" % app_key)
         self.app_key = app_key
 
     def api_fetch(self, path, params=''):
         """Fetch some JSON from the API."""
         url = "http://sc2ranks.com/api/%s.json?appKey=%s" % (path, self.app_key)
+        LOG.debug("Fetching %s" % url)
         return fetch_json(url, params)
 
-    def validate(self, data, exception):
+    def validate(self, data):
         if type(data).__name__ == 'dict' and 'error' in data:
-            raise exception
+            LOG.error("SC2Ranks ERROR: %r" % data)
+            return None
         else:
             if type(data).__name__ == 'dict':
                 return Sc2RanksResponse(data)
@@ -32,15 +36,13 @@ class Sc2Ranks:
 
     def search_for_character(self, region, name, search_type='exact'):
         return self.validate(
-            data=self.api_fetch('search/%s/%s/%s' % (search_type, region, name)),
-            exception=NoSuchCharacterException("Name: %s, region: %s" % (name, region)))
+            data=self.api_fetch('search/%s/%s/%s' % (search_type, region, name)))
 
     def search_for_profile(self, region, name, search_type='1t', search_subtype='division', value='Division'):
         """Search for a matching profile on sc2ranks.com."""
 
         return self.validate(
-            data=self.api_fetch('psearch/%s/%s/%s/%s/%s' % (region, name, search_type, search_subtype, value)),
-            exception=NoSuchCharacterException("Name: %s, region: %s" % (name, region)))
+            data=self.api_fetch('psearch/%s/%s/%s/%s/%s' % (region, name, search_type, search_subtype, value)))
 
     def fetch_base_character(self, region, name, bnet_id):
         """
@@ -50,15 +52,13 @@ class Sc2Ranks:
         """
 
         return self.validate(
-            data=self.api_fetch("base/char/%s/%s!%s" % (region, name, bnet_id)),
-            exception=NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id)))
+            data=self.api_fetch("base/char/%s/%s!%s" % (region, name, bnet_id)))
 
     def fetch_base_character_teams(self, region, name, bnet_id):
         """Fetches the base character data plus team data."""
 
         return self.validate(
-            data=self.api_fetch("base/teams/%s/%s!%s" % (region, name, bnet_id)),
-            exception=NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id)))
+            data=self.api_fetch("base/teams/%s/%s!%s" % (region, name, bnet_id)))
 
     def fetch_character_teams(self, region, name, bnet_id, bracket, is_random=False):
         """Fetches character info and extended team info."""
@@ -68,8 +68,7 @@ class Sc2Ranks:
             pass
         is_random = 1 if is_random else 0
         return self.validate(
-            data=self.api_fetch("char/teams/%s/%s!%s/%s/%s" % (region, name, bnet_id, bracket, is_random)),
-            exception=NoSuchCharacterException("Name: %s, region: %s, bnet_id: %s" % (name, region, bnet_id)))
+            data=self.api_fetch("char/teams/%s/%s!%s/%s/%s" % (region, name, bnet_id, bracket, is_random)))
 
     def fetch_mass_base_characters(self, characters):
         """
@@ -101,8 +100,7 @@ class Sc2Ranks:
         is_random = int(is_random)
 
         result = self.validate(
-            data=self.api_fetch("clist/%d/%s/%s/%d/%d" % (division_id, region, league, bracket, is_random)),
-            exception=NoSuchDivision())
+            data=self.api_fetch("clist/%d/%s/%s/%d/%d" % (division_id, region, league, bracket, is_random)))
         return result
 
     def fetch_mass_characters_team(self, characters, bracket='1v1', is_random=False):
@@ -145,28 +143,37 @@ def character_url(region, name, bnet_id=None, code=None):
 
 
 def fetch_json(url, params=None):
-    f = urllib.urlopen(url, params)
-    data = json.loads(f.read())
+    """
+    Tries to load a JSON object from an URL. If there is a connection problem,
+    of JSON error, this method wil return None and the errors are logged.
+    """
+    LOG.debug("Fetching JSON data from '%s'. Params: %r" % (
+        url, params))
+    try:
+        f = urllib.urlopen(url, params)
+    except IOError, exc:
+        LOG.exception("Unable to connect to remote host!")
+        return None
+    response_data = f.read()
     f.close()
-    return data
+    try:
+        data = json.loads(response_data)
+        LOG.debug("Response %r" % data)
+        return data
+    except Exception, exc:
+        LOG.exception("Unable to parse respose as JSON. Response was: %r" %
+                response_data)
+        return None
 
 
 class ParameterException(Exception):
     pass
 
 
-class NoSuchCharacterException(Exception):
-    pass
-
-
-class NoSuchDivision(Exception):
-    pass
-
-
 class Sc2RanksResponse(object):
     """JSON-Response containing the queried information from sc2ranks.com."""
 
-    def __init__(self, d):
+    def __init__(self, d={}):
         if 'portrait' in d:
             d['portrait'] = Sc2RanksResponse(d['portrait'])
 
@@ -180,6 +187,13 @@ class Sc2RanksResponse(object):
 
     def __repr__(self):
         return "<Sc2RanksResponse(%s)>" % ', '.join(map(lambda t: "%s=%s" % t, self.__dict__.iteritems()))
+
+
+    def __eq__(self, other):
+        for key, value in self.__dict__.iteritems():
+            if getattr(other, key, None) != value:
+                return False
+        return True
 
 
 if __name__ == "__main__":
