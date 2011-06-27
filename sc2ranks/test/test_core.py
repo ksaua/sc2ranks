@@ -1,7 +1,7 @@
 import unittest
 import logging
 
-from sc2ranks import *
+from sc2ranks import Sc2Ranks, Sc2RanksResponse
 
 API_KEY = 'tests@github.com/anrie/sc2ranks'
 PLAYER_NAME = 'Kapitulation'
