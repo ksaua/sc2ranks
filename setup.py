@@ -11,7 +11,7 @@ if sys.hexversion < 0x02060000:
     pre26requirements.append('simplejson')
 
 setup(name='sc2ranks',
-      version='0.3',
+      version='0.4',
       packages=find_packages(),
       test_suite = 'sc2ranks.test',
       install_requires = [] + pre26requirements
