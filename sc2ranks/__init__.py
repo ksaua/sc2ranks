@@ -1,1 +1,1 @@
-from sc2ranks import Sc2Ranks, Sc2RanksResponse
+from core import Sc2Ranks, Sc2RanksResponse
