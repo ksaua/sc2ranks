@@ -65,7 +65,7 @@ class Sc2Ranks(object):
             elif type(data).__name__ == 'list':
                 return [Sc2RanksResponse(datum) for datum in data]
 
-    def search_for_character(self, region, name, search_type='exact'):
+    def search_for_character(self, region, name, search_type='exact', offset=0):
         """
         Allows you to perform small searches, useful if you want to hookup an
         IRC bot or such. Only returns the first 10 names. Search is
@@ -80,9 +80,10 @@ class Sc2Ranks(object):
         Default='exact'
         """
         return self.validate(
-            data=self.api_fetch('search/%s/%s/%s' % (search_type,
+            data=self.api_fetch('search/%s/%s/%s/%i' % (search_type,
                 region.lower(),
-                name)))
+                name,
+                offset)))
 
     def search_for_profile(self, region, name, search_type='1t', search_subtype='division', value='Division'):
         """
